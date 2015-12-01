@@ -18,23 +18,29 @@ class TestDjjobs(TestCase):
     def setUp(self):
         pass
 
+
+    def make_job(self, job_label = 'test_job', runner_label = 'test_runner'):
+        runner = models.Runner.objects.create(label = runner_label)
+        return models.Job.objects.create(
+            label = job_label,
+            runner = runner,
+            description = 'a test job for testing slug'
+        )
+
     def test_creating_a_job(self):
         from django.utils.text import slugify
-        label = 'test_job'
-        job =  models.Job.objects.create(
-            label = label,
-            description = 'a test job for testing slug'
-        )
-        assert job.slug == slugify(label), "slugify not working: %s" % `job.slug`
+        job_label = 'test_job'
+        job = self.make_job(job_label)
+        assert job.slug == slugify(job_label), "slugify not working: %s" % `job.slug`
         assert job.run_type == job.TYPE_CRON, "run type default wrong: %s" % `job.run_type`
         assert job.enabled == False, "Should be disabled but is %s" % job.enabled
+        assert job.latest == None, "There should be no runs %s" % run
+        assert job.last_run == None, "should be none, but  %s" % job.last_run
+
 
     def test_starting_a_job(self):
-        label = 'test_job'
-        job =  models.Job.objects.create(
-            label = label,
-            description = 'a test job for testing slug'
-        )
+        job_label = 'test_job'
+        job = self.make_job(job_label)
         run = job.start()
         assert run.job == job, "job was not set for run %s" % run.pk
         assert run.state == run.STATUS_RUNNING, "state not switcted to running but is  %s" % `run.state`
@@ -43,6 +49,11 @@ class TestDjjobs(TestCase):
         assert run.errors == '', "Errors should not be set  but is %s" % `run.errors`
         assert job.enabled == True, "Should be enabled but is %s" % job.enabled
         assert job.latest == run, "last run should be completed %s" % run
+        running_count = job.running.count()
+        assert running_count == 1, "should only be one running %s" % running_count
+        run_count = job.runs.count()
+        assert run_count == 0, "should only be no previous %s" % run_count
+        assert job.last_run == None, "should be none, but  %s" % job.last_run
 
     # def test_creating_a_run(self):
     #     job =  models.Job.objects.create(

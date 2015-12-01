@@ -14,6 +14,8 @@ class Job(models.Model):
     TYPE_SERVICE = 'SERVICE'
     label = models.CharField(max_length=64)
     slug = AutoSlugField(populate_from='label')
+    runner = models.ForeignKey('Runner')
+    
     description = models.CharField(max_length=255)
     run_type = models.CharField(max_length=1, choices= map(lambda x: (x[0],x), (TYPE_PENDING,TYPE_CRON, TYPE_SERVICE)), default = TYPE_CRON)
     enabled = models.BooleanField(default=False)
@@ -27,18 +29,35 @@ class Job(models.Model):
 
     @property
     def last_run(self):
-        return self.run.latest('ended')
-    
+        try:
+            return self.runs.latest('ended')
+        except  Run.DoesNotExist:
+            pass
+
     @property
     def running(self):
         return self.run_set.filter(state = Run.STATUS_RUNNING)
-        
+
     @property
     def latest(self):
-        return self.running.latest('ended')
+        try:
+            return self.running.latest('ended')
+        except Run.DoesNotExist:
+            pass
+
     @property
-    def run(self):
-        return self.run_set.filter(state__ne = Run.STATUS_RUNNING)
+    def runs(self):
+        return self.run_set.exclude(state = Run.STATUS_RUNNING)
+
+
+class Runner(models.Model):
+    label = models.CharField(max_length=64)
+    slug = AutoSlugField(populate_from='label')
+
+class Configuration(models.Model):
+    label = models.CharField(max_length=64)
+    slug = AutoSlugField(populate_from='label')
+
     
 class Run(models.Model):
     STATUS_RUNNING = 'RUNNING'
